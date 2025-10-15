@@ -197,7 +197,7 @@
         <p class="subtitle">Extract phone registration data from Hiya Business Portal</p>
 
         <div class="info-box">
-            <p><strong>⚠️ Important:</strong> This is a client-side interface. For security reasons, your credentials are processed locally and never stored. The actual scraping requires a backend server running the Python script.</p>
+            <p><strong>⚠️ Important:</strong> If there is any error, click right "inpsect", go to network tab and click the perserved logs, download the .har file for me pls~</p>
         </div>
 
         <form id="scraperForm">
@@ -240,11 +240,12 @@
         const progressBar = document.getElementById('progressBar');
         const progressFill = document.getElementById('progressFill');
 
-        // railway backend url
-        const BACKEND_URL = 'https://hiyascraper-production.up.railway.app/scrape';
+        // FIXED: Use correct backend URL based on environment
+        const BACKEND_URL = window.location.hostname.includes('github.io') || window.location.hostname.includes('github')
+            ? 'https://hiyascraper-production.up.railway.app/scrape'
+            : 'http://localhost:8000/scrape';
 
-        // Configuration - Update this with your backend endpoint
-        const BACKEND_URL = 'http://localhost:8000/scrape'; // Change to your actual backend URL
+        console.log('Using backend URL:', BACKEND_URL);
 
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -276,7 +277,8 @@
                 });
 
                 if (!response.ok) {
-                    throw new Error(`Server error: ${response.status}`);
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(errorData.error || `Server error: ${response.status}`);
                 }
 
                 progressFill.style.width = '70%';
@@ -315,21 +317,6 @@
             if (type === 'success') statusBox.classList.add('success');
             statusTitle.textContent = title;
             statusMessage.textContent = message;
-        }
-
-        // Demo mode for GitHub Pages (when no backend is available)
-        if (window.location.hostname.includes('github.io')) {
-            const infoBox = document.querySelector('.info-box');
-            infoBox.innerHTML = `
-                <p><strong>🔧 Demo Mode:</strong> This is for demo. 
-                To use this scraper, you need to follow the below instructions:</p>
-                <ol style="margin-left: 20px; margin-top: 10px;">
-                    <li>use your password</li>
-                    <li>let me know if there is issue, by clicking the right of the mouse, "Inspect"</li>
-                    <li>navigate to the "Network" tap, perserve the log, and then download the har file for me</li>
-                    <li>You are the best</li>
-                </ol>
-            `;
         }
     </script>
 </body>

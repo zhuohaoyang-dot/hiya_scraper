@@ -2,4 +2,8 @@
 builder = "NIXPACKS"
 
 [deploy]
-startCommand = "pip install playwright && playwright install chromium && playwright install-deps && gunicorn --bind 0.0.0.0:$PORT --timeout 300 --workers 1 api:app"
+startCommand = "playwright install-deps && playwright install chromium && gunicorn --bind 0.0.0.0:$PORT --timeout 300 --workers 1 --log-level info api:app"
+healthcheckPath = "/"
+healthcheckTimeout = 100
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 10

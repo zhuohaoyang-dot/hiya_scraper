@@ -1,12 +1,11 @@
 """
 Hiya Business Phone Numbers Scraper
 Extracts phone registration data and exports to CSV
-Fixed version for Railway deployment
+Fixed version with button-click pagination
 """
 
 import asyncio
 import csv
-import os
 from datetime import datetime
 from playwright.async_api import async_playwright, TimeoutError as PlaywrightTimeout
 import json
@@ -243,18 +242,9 @@ class HiyaScraper:
         async with async_playwright() as p:
             # Launch browser
             print("Launching browser...")
-            
-            # FIXED: Use headless mode for production
-            is_production = os.environ.get('RAILWAY_ENVIRONMENT') or os.environ.get('PORT')
-            
             browser = await p.chromium.launch(
-                headless=bool(is_production),  # True in production, False locally
-                args=[
-                    '--no-sandbox',
-                    '--disable-setuid-sandbox',
-                    '--disable-dev-shm-usage',
-                    '--disable-gpu'
-                ] if is_production else []
+                headless=False,  # Set to True for production
+                slow_mo=50
             )
             
             context = await browser.new_context(
@@ -277,10 +267,9 @@ class HiyaScraper:
                 await page.wait_for_selector('tbody.MuiTableBody-root', timeout=30000)
                 await asyncio.sleep(3)
                 
-                # FIXED: Only save screenshots locally, not in production
-                if not is_production:
-                    await page.screenshot(path="hiya_page_debug.png")
-                    print("✓ Screenshot saved as hiya_page_debug.png")
+                # Take screenshot for debugging
+                await page.screenshot(path="hiya_page_debug.png")
+                print("✓ Screenshot saved as hiya_page_debug.png")
                 
                 # Extract all data with pagination
                 print("\nStarting data extraction...")
@@ -293,10 +282,8 @@ class HiyaScraper:
                 
             except Exception as e:
                 print(f"\n❌ Error during scraping: {e}")
-                # FIXED: Only save error screenshots locally
-                if not is_production:
-                    await page.screenshot(path="hiya_error.png")
-                    print("Error screenshot saved as hiya_error.png")
+                await page.screenshot(path="hiya_error.png")
+                print("Error screenshot saved as hiya_error.png")
                 raise
             
             finally:
@@ -329,17 +316,11 @@ class HiyaScraper:
         return filename
 
 
-# REMOVED: Hardcoded credentials from main function
 async def main():
-    """Main function for local testing"""
-    # Get credentials from environment variables
-    EMAIL = os.environ.get('HIYA_EMAIL')
-    PASSWORD = os.environ.get('HIYA_PASSWORD')
-    
-    if not EMAIL or not PASSWORD:
-        print("❌ Error: HIYA_EMAIL and HIYA_PASSWORD environment variables required")
-        print("Usage: HIYA_EMAIL=your@email.com HIYA_PASSWORD=yourpass python scraper.py")
-        return
+    """Main function"""
+    # Configuration
+    EMAIL = "julia.smith@bridgelegal.com"
+    PASSWORD = "@sh2019Irish2023!"
     
     # Create scraper
     scraper = HiyaScraper(EMAIL, PASSWORD)
