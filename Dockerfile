@@ -19,19 +19,3 @@ EXPOSE 8080
 
 # Run startup script
 CMD ["./startup.sh"]
-```
-
-3. Commit: "Use startup script with debugging"
-
----
-
-### **Step 3: Wait and check logs**
-
-After Railway redeploys (2-3 minutes), check the Deploy Logs. You should now see:
-```
-=== Starting Hiya Scraper API ===
-Python version: 3.10.x
-Current directory: /app
-Files in directory:
-...
-Testing imports...
