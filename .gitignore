@@ -1,0 +1,71 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
+venv/
+ENV/
+env/
+.venv
+
+# Playwright
+.playwright/
+playwright-report/
+
+# Screenshots and debug files
+*.png
+hiya_page_debug.png
+hiya_error.png
+
+# CSV output files (optional - uncomment if you don't want to track CSVs)
+# *.csv
+# hiya_phones_*.csv
+
+# Logs
+*.log
+
+# OS Files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Environment variables (IMPORTANT - never commit credentials!)
+.env
+.env.local
+config.json
+credentials.json
+
+# Temporary files
+*.tmp
+temp/
+tmp/
+
