@@ -13,5 +13,5 @@ COPY . .
 ENV PORT=8080
 EXPOSE 8080
 
-# Run the application
-CMD ["python", "api.py"]
+# Use gunicorn for production with longer timeout
+CMD gunicorn --bind 0.0.0.0:$PORT --timeout 300 --workers 1 --threads 2 --log-level debug api:app
