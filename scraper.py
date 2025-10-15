@@ -63,18 +63,14 @@ class HiyaScraper:
         # Wait for table to be visible
         await page.wait_for_selector('tbody.MuiTableBody-root', timeout=15000)
         
-        # Wait for actual data to load
-        print("Waiting for data to populate...")
-        await asyncio.sleep(3)
-        
         # Wait for actual phone number links to appear
         try:
             await page.wait_for_selector('tbody.MuiTableBody-root a[href*="/phones/"]', timeout=10000)
+            # Reduced wait time - data should be loaded by now
+            await asyncio.sleep(1)
         except PlaywrightTimeout:
             print("⚠ Warning: Phone links not found, might be loading...")
-        
-        # Additional wait to ensure all data is loaded
-        await asyncio.sleep(2)
+            await asyncio.sleep(2)
         
         # Get all table rows from tbody
         rows = await page.locator('tbody.MuiTableBody-root tr.MuiTableRow-root').all()
