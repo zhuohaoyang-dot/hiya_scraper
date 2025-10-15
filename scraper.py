@@ -18,7 +18,9 @@ class HiyaScraper:
         self.login_url = "https://auth-console.hiya.com/u/login?state=hKFo2SAtSWtMVzNXN1haaS1hbG5NR0lMSnNYbmY5Z1JqUUZ4SKFur3VuaXZlcnNhbC1sb2dpbqN0aWTZIE1JekpYbWNvQUFoZDVlSm50elhabnhVZTl4b0tmU1Zso2NpZNkgUHpRQlgzd0ZUMEdiNnVuMVI0SUtQcjlaSWF3TXRkNzU"
         self.phones_url = f"{self.base_url}/registration/cross-carrier-registration/phones"
         self.data = []
-        
+        self.total_pages = 20
+
+    
     async def login(self, page):
         """Handle login to Hiya"""
         print("Navigating to login page...")
