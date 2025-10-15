@@ -240,6 +240,9 @@
         const progressBar = document.getElementById('progressBar');
         const progressFill = document.getElementById('progressFill');
 
+        // railway backend url
+        const BACKEND_URL = 'https://hiyascraper-production.up.railway.app/scrape';
+
         // Configuration - Update this with your backend endpoint
         const BACKEND_URL = 'http://localhost:8000/scrape'; // Change to your actual backend URL
 
@@ -318,13 +321,13 @@
         if (window.location.hostname.includes('github.io')) {
             const infoBox = document.querySelector('.info-box');
             infoBox.innerHTML = `
-                <p><strong>🔧 Demo Mode:</strong> This is running on GitHub Pages without a backend. 
-                To use this scraper, you need to:</p>
+                <p><strong>🔧 Demo Mode:</strong> This is for demo. 
+                To use this scraper, you need to follow the below instructions:</p>
                 <ol style="margin-left: 20px; margin-top: 10px;">
-                    <li>Clone the repository</li>
-                    <li>Set up the Python backend (instructions in README)</li>
-                    <li>Run the backend server locally or deploy it</li>
-                    <li>Update the BACKEND_URL in the HTML file</li>
+                    <li>use your password</li>
+                    <li>let me know if there is issue, by clicking the right of the mouse, "Inspect"</li>
+                    <li>navigate to the "Network" tap, perserve the log, and then download the har file for me</li>
+                    <li>You are the best</li>
                 </ol>
             `;
         }
