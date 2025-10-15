@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hiya Phone Number Scraper</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #444;
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .scrape-button {
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin-top: 10px;
+        }
+
+        .scrape-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .scrape-button:active {
+            transform: translateY(0);
+        }
+
+        .scrape-button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .status-box {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+            display: none;
+        }
+
+        .status-box.show {
+            display: block;
+        }
+
+        .status-box.error {
+            border-left-color: #e74c3c;
+            background: #fee;
+        }
+
+        .status-box.success {
+            border-left-color: #27ae60;
+            background: #efe;
+        }
+
+        .status-title {
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #333;
+        }
+
+        .status-message {
+            color: #666;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e0e0e0;
+            border-radius: 4px;
+            margin-top: 15px;
+            overflow: hidden;
+            display: none;
+        }
+
+        .progress-bar.show {
+            display: block;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            width: 0%;
+            transition: width 0.3s;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            margin-right: 10px;
+            vertical-align: middle;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .info-box {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #2196f3;
+        }
+
+        .info-box p {
+            color: #555;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📱 Hiya Phone Scraper</h1>
+        <p class="subtitle">Extract phone registration data from Hiya Business Portal</p>
+
+        <div class="info-box">
+            <p><strong>⚠️ Important:</strong> This is a client-side interface. For security reasons, your credentials are processed locally and never stored. The actual scraping requires a backend server running the Python script.</p>
+        </div>
+
+        <form id="scraperForm">
+            <div class="input-group">
+                <label for="email">Email Address</label>
+                <input type="email" id="email" placeholder="your.email@company.com" required>
+            </div>
+
+            <div class="input-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" placeholder="Enter your password" required>
+            </div>
+
+            <div class="input-group">
+                <label for="pages">Number of Pages to Scrape</label>
+                <input type="number" id="pages" value="20" min="1" max="100">
+            </div>
+
+            <button type="submit" class="scrape-button" id="scrapeBtn">
+                🚀 Start Scraping
+            </button>
+        </form>
+
+        <div class="progress-bar" id="progressBar">
+            <div class="progress-fill" id="progressFill"></div>
+        </div>
+
+        <div class="status-box" id="statusBox">
+            <div class="status-title" id="statusTitle">Status</div>
+            <div class="status-message" id="statusMessage"></div>
+        </div>
+    </div>
+
+    <script>
+        const form = document.getElementById('scraperForm');
+        const scrapeBtn = document.getElementById('scrapeBtn');
+        const statusBox = document.getElementById('statusBox');
+        const statusTitle = document.getElementById('statusTitle');
+        const statusMessage = document.getElementById('statusMessage');
+        const progressBar = document.getElementById('progressBar');
+        const progressFill = document.getElementById('progressFill');
+
+        // Configuration - Update this with your backend endpoint
+        const BACKEND_URL = 'http://localhost:8000/scrape'; // Change to your actual backend URL
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const pages = document.getElementById('pages').value;
+
+            // Disable button and show progress
+            scrapeBtn.disabled = true;
+            scrapeBtn.innerHTML = '<span class="spinner"></span> Scraping in progress...';
+            progressBar.classList.add('show');
+            progressFill.style.width = '30%';
+
+            showStatus('info', 'Starting Scraper', 'Connecting to Hiya and logging in...');
+
+            try {
+                // Call backend API
+                const response = await fetch(BACKEND_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        email: email,
+                        password: password,
+                        pages: parseInt(pages)
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Server error: ${response.status}`);
+                }
+
+                progressFill.style.width = '70%';
+                showStatus('info', 'Processing Data', 'Extracting records from all pages...');
+
+                const blob = await response.blob();
+                progressFill.style.width = '100%';
+
+                // Download CSV file
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `hiya_phones_${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.csv`;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+
+                showStatus('success', 'Success! 🎉', `Data successfully scraped and downloaded! Check your downloads folder for the CSV file.`);
+
+            } catch (error) {
+                console.error('Scraping error:', error);
+                showStatus('error', 'Error Occurred', `Failed to scrape data: ${error.message}. Please check your credentials and try again.`);
+            } finally {
+                // Reset button
+                scrapeBtn.disabled = false;
+                scrapeBtn.innerHTML = '🚀 Start Scraping';
+                progressBar.classList.remove('show');
+                progressFill.style.width = '0%';
+            }
+        });
+
+        function showStatus(type, title, message) {
+            statusBox.className = 'status-box show';
+            if (type === 'error') statusBox.classList.add('error');
+            if (type === 'success') statusBox.classList.add('success');
+            statusTitle.textContent = title;
+            statusMessage.textContent = message;
+        }
+
+        // Demo mode for GitHub Pages (when no backend is available)
+        if (window.location.hostname.includes('github.io')) {
+            const infoBox = document.querySelector('.info-box');
+            infoBox.innerHTML = `
+                <p><strong>🔧 Demo Mode:</strong> This is running on GitHub Pages without a backend. 
+                To use this scraper, you need to:</p>
+                <ol style="margin-left: 20px; margin-top: 10px;">
+                    <li>Clone the repository</li>
+                    <li>Set up the Python backend (instructions in README)</li>
+                    <li>Run the backend server locally or deploy it</li>
+                    <li>Update the BACKEND_URL in the HTML file</li>
+                </ol>
+            `;
+        }
+    </script>
+</body>
+</html>
