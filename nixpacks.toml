@@ -16,7 +16,13 @@ aptPkgs = [
   "libgbm1",
   "libasound2t64",
   "libatspi2.0-0",
-  "libxshmfence1"
+  "libxshmfence1",
+  "libpango-1.0-0",
+  "libcairo2",
+  "libpangocairo-1.0-0",
+  "fonts-liberation",
+  "libegl1",
+  "libgles2"
 ]
 
 [phases.install]
