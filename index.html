@@ -132,6 +132,34 @@
             line-height: 1.6;
         }
 
+        .log-container {
+            margin-top: 15px;
+            max-height: 300px;
+            overflow-y: auto;
+            background: #f5f5f5;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            line-height: 1.6;
+            border: 1px solid #ddd;
+        }
+
+        .log-entry {
+            margin-bottom: 4px;
+            color: #333;
+        }
+
+        .log-entry.success {
+            color: #27ae60;
+            font-weight: 600;
+        }
+
+        .log-entry.error {
+            color: #e74c3c;
+            font-weight: 600;
+        }
+
         .progress-bar {
             width: 100%;
             height: 8px;
@@ -228,7 +256,7 @@
         <div class="status-box" id="statusBox">
             <div class="status-title" id="statusTitle">Status</div>
             <div class="status-message" id="statusMessage"></div>
-            <div id="logContainer" style="margin-top: 15px; max-height: 300px; overflow-y: auto; background: #f5f5f5; padding: 10px; border-radius: 5px; font-family: monospace; font-size: 12px; line-height: 1.4; display: none;"></div>
+            <div class="log-container" id="logContainer"></div>
         </div>
     </div>
 
@@ -240,11 +268,12 @@
         const statusMessage = document.getElementById('statusMessage');
         const progressBar = document.getElementById('progressBar');
         const progressFill = document.getElementById('progressFill');
+        const logContainer = document.getElementById('logContainer');
 
-        // FIXED: Use correct backend URL based on environment
+        // Use correct backend URL based on environment
         const BACKEND_URL = window.location.hostname.includes('github.io') || window.location.hostname.includes('github')
-            ? 'https://hiyascraper-production.up.railway.app/scrape'
-            : 'http://localhost:8000/scrape';
+            ? 'https://hiyascraper-production.up.railway.app'
+            : 'http://localhost:8000';
 
         console.log('Using backend URL:', BACKEND_URL);
 
@@ -253,19 +282,29 @@
 
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
-            const pages = document.getElementById('pages').value;
+            const pages = parseInt(document.getElementById('pages').value);
+
+            // Clear previous logs
+            logContainer.innerHTML = '';
 
             // Disable button and show progress
             scrapeBtn.disabled = true;
             scrapeBtn.innerHTML = '<span class="spinner"></span> Scraping in progress...';
             progressBar.classList.add('show');
-            progressFill.style.width = '30%';
+            progressFill.style.width = '10%';
 
             showStatus('info', 'Starting Scraper', 'Connecting to Hiya and logging in...');
+            addLog('🚀 Initializing scraper...');
+            addLog(`📊 Target: ${pages} pages`);
+
+            // Start progress simulation
+            startProgressSimulation(pages);
 
             try {
+                addLog('🔐 Logging into Hiya...');
+                
                 // Call backend API
-                const response = await fetch(BACKEND_URL, {
+                const response = await fetch(`${BACKEND_URL}/scrape`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -273,7 +312,7 @@
                     body: JSON.stringify({
                         email: email,
                         password: password,
-                        pages: parseInt(pages)
+                        pages: pages
                     })
                 });
 
@@ -282,33 +321,42 @@
                     throw new Error(errorData.error || `Server error: ${response.status}`);
                 }
 
-                progressFill.style.width = '70%';
-                showStatus('info', 'Processing Data', 'Extracting records from all pages...');
+                clearInterval(progressSimulator);
+                progressFill.style.width = '95%';
+                addLog('📥 Receiving data from server...');
+                showStatus('info', 'Processing Data', 'Downloading your CSV file...');
 
                 const blob = await response.blob();
                 progressFill.style.width = '100%';
 
-                // Download CSV file
+                // Automatically download CSV file
                 const url = window.URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = `hiya_phones_${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.csv`;
+                const filename = `hiya_phones_${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.csv`;
+                a.download = filename;
                 document.body.appendChild(a);
                 a.click();
                 window.URL.revokeObjectURL(url);
                 document.body.removeChild(a);
 
+                addLog('✅ CSV file downloaded successfully!', 'success');
+                addLog(`📁 File: ${filename}`, 'success');
                 showStatus('success', 'Success! 🎉', `Data successfully scraped and downloaded! Check your downloads folder for the CSV file.`);
 
             } catch (error) {
+                clearInterval(progressSimulator);
                 console.error('Scraping error:', error);
+                addLog(`❌ Error: ${error.message}`, 'error');
                 showStatus('error', 'Error Occurred', `Failed to scrape data: ${error.message}. Please check your credentials and try again.`);
             } finally {
                 // Reset button
                 scrapeBtn.disabled = false;
                 scrapeBtn.innerHTML = '🚀 Start Scraping';
-                progressBar.classList.remove('show');
-                progressFill.style.width = '0%';
+                setTimeout(() => {
+                    progressBar.classList.remove('show');
+                    progressFill.style.width = '0%';
+                }, 2000);
             }
         });
 
@@ -318,6 +366,41 @@
             if (type === 'success') statusBox.classList.add('success');
             statusTitle.textContent = title;
             statusMessage.textContent = message;
+        }
+
+        function addLog(message, type = '') {
+            const logEntry = document.createElement('div');
+            logEntry.className = 'log-entry' + (type ? ' ' + type : '');
+            logEntry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logContainer.appendChild(logEntry);
+            logContainer.scrollTop = logContainer.scrollHeight;
+        }
+
+        // Simulate progress updates
+        let progressSimulator;
+        function startProgressSimulation(pages) {
+            let currentPage = 0;
+            const pageTime = 3000; // 3 seconds per page estimate
+            
+            addLog('🔍 Starting page extraction...');
+            
+            progressSimulator = setInterval(() => {
+                if (currentPage < pages) {
+                    currentPage++;
+                    const percent = Math.min(90, 10 + (currentPage / pages) * 80);
+                    progressFill.style.width = `${percent}%`;
+                    
+                    if (currentPage % 5 === 0 || currentPage === 1) {
+                        addLog(`📄 Processing page ${currentPage} of ${pages}...`);
+                    }
+                    
+                    if (currentPage === pages) {
+                        addLog('🔄 Finalizing data extraction...');
+                    }
+                } else {
+                    clearInterval(progressSimulator);
+                }
+            }, pageTime);
         }
     </script>
 </body>

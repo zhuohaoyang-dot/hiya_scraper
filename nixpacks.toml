@@ -33,4 +33,5 @@ cmds = [
 ]
 
 [start]
-cmd = ". /opt/venv/bin/activate && gunicorn --bind 0.0.0.0:$PORT --timeout 1400 --workers 1 --threads 4 --worker-class gthread --log-level info api:app"
+# Extended timeout with keep-alive to prevent Railway platform timeouts
+cmd = ". /opt/venv/bin/activate && gunicorn --bind 0.0.0.0:$PORT --timeout 1800 --workers 1 --threads 4 --worker-class gthread --keep-alive 300 --graceful-timeout 120 --log-level info api:app"
