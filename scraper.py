@@ -200,7 +200,7 @@ class HiyaScraper:
         all_data = []
         
         # Total pages is 20
-        total_pages = 20
+        total_pages = self.total_pages
         current_page = 1
         
         while current_page <= total_pages:
