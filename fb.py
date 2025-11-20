@@ -6,6 +6,7 @@ Fixed version with button-click pagination
 
 import asyncio
 import csv
+import os
 from datetime import datetime
 from playwright.async_api import async_playwright, TimeoutError as PlaywrightTimeout
 import json
@@ -317,11 +318,16 @@ class HiyaScraper:
 
 
 async def main():
-    """Main function"""
-    # Configuration
-    EMAIL = "julia.smith@bridgelegal.com"
-    PASSWORD = "@sh2019Irish2023!"
-    
+    """Main function for local testing"""
+    # Get credentials from environment variables
+    EMAIL = os.environ.get('HIYA_EMAIL')
+    PASSWORD = os.environ.get('HIYA_PASSWORD')
+
+    if not EMAIL or not PASSWORD:
+        print("❌ Error: HIYA_EMAIL and HIYA_PASSWORD environment variables required")
+        print("Usage: HIYA_EMAIL=your@email.com HIYA_PASSWORD=yourpass python fb.py")
+        return
+
     # Create scraper
     scraper = HiyaScraper(EMAIL, PASSWORD)
     

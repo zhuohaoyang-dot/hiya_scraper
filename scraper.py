@@ -26,31 +26,68 @@ class HiyaScraper:
         """Handle login to Hiya"""
         print("Navigating to login page...")
         await page.goto(self.login_url, wait_until="domcontentloaded", timeout=60000)
-        
+
         # Wait for login form
         await page.wait_for_selector('input[type="email"], input[type="text"]', timeout=10000)
-        
+
         # Fill in credentials
         print("Entering credentials...")
         email_input = page.locator('input[type="email"], input[name="username"], input[name="email"]').first
         await email_input.fill(self.email)
-        
+
         password_input = page.locator('input[type="password"], input[name="password"]').first
         await password_input.fill(self.password)
-        
+
         # Click login button
         login_button = page.locator('button[type="submit"], button:has-text("Log in"), button:has-text("Continue")').first
         await login_button.click()
-        
+
         # Wait for navigation after login
         print("Waiting for authentication...")
+        await asyncio.sleep(5)
+
+        # Check for "Remember this device" or verification page
+        current_url = page.url
+        print(f"Current URL after login: {current_url}")
+
+        # Look for common verification/remember device buttons
         try:
-            await page.wait_for_url("**/registration/**", timeout=10000)
+            # Check for "Remember this device", "Trust this device", "Continue", "Yes", "Verify" buttons
+            verification_buttons = [
+                'button:has-text("Remember")',
+                'button:has-text("Trust")',
+                'button:has-text("Yes")',
+                'button:has-text("Continue")',
+                'button:has-text("Verify")',
+                'button:has-text("Skip")',
+                'button[type="submit"]'
+            ]
+
+            for selector in verification_buttons:
+                button = page.locator(selector).first
+                if await button.count() > 0:
+                    try:
+                        is_visible = await button.is_visible()
+                        if is_visible:
+                            print(f"Found verification button: {selector}")
+                            await button.click()
+                            print("✓ Clicked verification button")
+                            await asyncio.sleep(3)
+                            break
+                    except:
+                        continue
+        except Exception as e:
+            print(f"No verification button found or already past verification: {e}")
+
+        # Wait for final navigation to complete
+        try:
+            await page.wait_for_url("**/registration/**", timeout=15000)
             print("✓ Login successful!")
         except PlaywrightTimeout:
             # Sometimes redirects take different paths
             await asyncio.sleep(5)
             current_url = page.url
+            print(f"Final URL: {current_url}")
             if "hiya.com" in current_url and "login" not in current_url:
                 print("✓ Login successful!")
             else:
