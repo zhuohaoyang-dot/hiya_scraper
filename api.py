@@ -7,16 +7,35 @@ import os
 from datetime import datetime
 import json
 import sys
+import base64
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for GitHub Pages
 
+def load_cookies_from_env():
+    """Load cookies from environment variable"""
+    cookies_b64 = os.environ.get('HIYA_COOKIES')
+    if not cookies_b64:
+        return None
+
+    try:
+        cookies_json = base64.b64decode(cookies_b64).decode()
+        cookies = json.loads(cookies_json)
+        return cookies
+    except Exception as e:
+        print(f"Error loading cookies from environment: {e}")
+        return None
+
 # Add a root route for health check
 @app.route('/')
 def home():
+    cookies = load_cookies_from_env()
+    cookies_status = "✓ Configured" if cookies else "✗ Not configured"
+
     return jsonify({
         'status': 'running',
         'message': 'Hiya Scraper API is running',
+        'cookies_status': cookies_status,
         'endpoints': {
             'scrape': '/scrape (POST)',
             'scrape_stream': '/scrape-stream (POST)'
@@ -25,15 +44,21 @@ def home():
 
 @app.route('/scrape', methods=['POST'])
 def scrape_hiya():
-    """Original scrape endpoint - returns CSV file directly"""
+    """Scrape endpoint - uses cookie-based authentication"""
     try:
+        # Load cookies from environment
+        cookies = load_cookies_from_env()
+
+        if not cookies:
+            return jsonify({
+                'error': 'No cookies configured. Please run capture_cookies.py and add HIYA_COOKIES to Railway environment variables.'
+            }), 503
+
         data = request.json
-        email = data.get('email')
-        password = data.get('password')
         pages = data.get('pages', 20)
-        
-        # Create scraper instance
-        scraper = HiyaScraper(email, password)
+
+        # Create scraper instance with cookies
+        scraper = HiyaScraper(cookies=cookies)
         scraper.total_pages = pages
         
         # Run async scraper
@@ -71,18 +96,24 @@ def scrape_hiya():
 
 @app.route('/scrape-stream', methods=['POST'])
 def scrape_hiya_stream():
-    """New endpoint with real-time progress updates via Server-Sent Events"""
+    """Streaming endpoint with real-time progress updates via Server-Sent Events"""
     try:
+        # Load cookies from environment
+        cookies = load_cookies_from_env()
+
+        if not cookies:
+            return jsonify({
+                'error': 'No cookies configured. Please run capture_cookies.py and add HIYA_COOKIES to Railway environment variables.'
+            }), 503
+
         data = request.json
-        email = data.get('email')
-        password = data.get('password')
         pages = data.get('pages', 20)
-        
+
         def generate():
             """Generator function for SSE stream"""
             try:
-                # Create scraper with custom progress callback
-                scraper = HiyaScraper(email, password)
+                # Create scraper with cookies
+                scraper = HiyaScraper(cookies=cookies)
                 scraper.total_pages = pages
                 
                 # Override print to capture logs

@@ -12,9 +12,11 @@ from playwright.async_api import async_playwright, TimeoutError as PlaywrightTim
 import json
 
 class HiyaScraper:
-    def __init__(self, email, password):
+    def __init__(self, email=None, password=None, manual_login=False, cookies=None):
         self.email = email
         self.password = password
+        self.manual_login = manual_login  # New flag for manual login mode
+        self.cookies = cookies  # Pre-authenticated cookies
         self.base_url = "https://business.hiya.com"
         self.login_url = "https://auth-console.hiya.com/u/login?state=hKFo2SAtSWtMVzNXN1haaS1hbG5NR0lMSnNYbmY5Z1JqUUZ4SKFur3VuaXZlcnNhbC1sb2dpbqN0aWTZIE1JekpYbWNvQUFoZDVlSm50elhabnhVZTl4b0tmU1Zso2NpZNkgUHpRQlgzd0ZUMEdiNnVuMVI0SUtQcjlaSWF3TXRkNzU"
         self.phones_url = f"{self.base_url}/registration/cross-carrier-registration/phones"
@@ -22,8 +24,62 @@ class HiyaScraper:
         self.total_pages = 20
 
     
+    async def wait_for_manual_login(self, page):
+        """Wait for user to manually complete login and reach the phones page"""
+        print("\n" + "="*60)
+        print("🔐 MANUAL LOGIN REQUIRED")
+        print("="*60)
+        print("Please complete the following steps in the browser window:")
+        print("1. Complete the Google OAuth login")
+        print("2. Navigate to the phones page if not automatically redirected")
+        print("3. The scraper will automatically detect when you're ready")
+        print("="*60 + "\n")
+
+        # Wait for user to reach the phones page (or any hiya.com page with registration)
+        max_wait_time = 300  # 5 minutes max
+        start_time = asyncio.get_event_loop().time()
+
+        while True:
+            current_url = page.url
+
+            # Check if we've reached the target page
+            if "business.hiya.com" in current_url and "registration" in current_url:
+                print("✓ Login detected! You've reached the Hiya portal")
+                await asyncio.sleep(2)  # Small delay to ensure page is fully loaded
+                return True
+
+            # Check timeout
+            elapsed = asyncio.get_event_loop().time() - start_time
+            if elapsed > max_wait_time:
+                raise Exception("Manual login timeout - please try again")
+
+            # Check every 2 seconds
+            await asyncio.sleep(2)
+
+            # Print progress every 10 seconds
+            if int(elapsed) % 10 == 0 and int(elapsed) > 0:
+                remaining = int(max_wait_time - elapsed)
+                print(f"⏳ Waiting for login... ({remaining}s remaining)")
+
     async def login(self, page):
-        """Handle login to Hiya"""
+        """Handle login to Hiya - supports cookie, manual, and automatic modes"""
+
+        # Cookie-based authentication (preferred method)
+        if self.cookies:
+            print("Using cookie-based authentication...")
+            # Cookies will be loaded in the scrape() method via context
+            print("✓ Cookies loaded, skipping login")
+            return
+
+        if self.manual_login:
+            # Manual login mode - open login page and wait for user
+            print("Opening login page for manual authentication...")
+            await page.goto(self.login_url, wait_until="domcontentloaded", timeout=60000)
+            await self.wait_for_manual_login(page)
+            print("✓ Manual login successful!")
+            return
+
+        # Automatic login mode (keeping old logic for backwards compatibility)
         print("Navigating to login page...")
         await page.goto(self.login_url, wait_until="domcontentloaded", timeout=60000)
 
@@ -276,12 +332,15 @@ class HiyaScraper:
         async with async_playwright() as p:
             # Launch browser
             print("Launching browser...")
-            
-            # FIXED: Use headless mode for production
+
+            # FIXED: Use headless mode for production, but NEVER for manual login
             is_production = os.environ.get('RAILWAY_ENVIRONMENT') or os.environ.get('PORT')
-            
+
+            # Force headless=False for manual login mode
+            use_headless = bool(is_production) and not self.manual_login
+
             browser = await p.chromium.launch(
-                headless=bool(is_production),  # True in production, False locally
+                headless=use_headless,  # False for manual login or local, True for production
                 args=[
                     '--no-sandbox',
                     '--disable-setuid-sandbox',
@@ -289,21 +348,44 @@ class HiyaScraper:
                     '--disable-gpu'
                 ] if is_production else []
             )
-            
+
             context = await browser.new_context(
                 viewport={'width': 1920, 'height': 1080},
                 user_agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'
             )
-            
+
+            # Load cookies if provided
+            if self.cookies:
+                print(f"Loading {len(self.cookies)} cookies into browser context...")
+                await context.add_cookies(self.cookies)
+
             page = await context.new_page()
-            
+
             try:
-                # Login
-                await self.login(page)
-                
-                # Navigate to phones page
-                print(f"\nNavigating to phones page...")
-                await page.goto(self.phones_url, wait_until="domcontentloaded", timeout=60000)
+                # Login (or skip if using cookies)
+                if self.cookies:
+                    # Skip login, go directly to phones page
+                    print("Navigating directly to phones page with cookies...")
+                    await page.goto(self.phones_url, wait_until="domcontentloaded", timeout=60000)
+
+                    # Verify we're logged in by checking URL
+                    await asyncio.sleep(3)
+                    current_url = page.url
+
+                    if "login" in current_url or "auth" in current_url:
+                        raise Exception("Cookies expired or invalid - please capture new cookies")
+
+                    if "business.hiya.com" not in current_url:
+                        raise Exception("Failed to access Hiya business portal - cookies may be expired")
+
+                    print("✓ Successfully authenticated with cookies!")
+                else:
+                    # Traditional login flow
+                    await self.login(page)
+
+                    # Navigate to phones page (only if not using cookies)
+                    print(f"\nNavigating to phones page...")
+                    await page.goto(self.phones_url, wait_until="domcontentloaded", timeout=60000)
                 
                 # Wait for table to appear
                 print("Waiting for table to load...")

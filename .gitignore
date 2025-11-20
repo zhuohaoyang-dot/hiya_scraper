@@ -64,6 +64,11 @@ Thumbs.db
 config.json
 credentials.json
 
+# Cookies (IMPORTANT - never commit session cookies!)
+hiya_cookies.txt
+*.cookies
+cookies.json
+
 # Temporary files
 *.tmp
 temp/
