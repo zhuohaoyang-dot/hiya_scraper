@@ -285,12 +285,33 @@ async def authenticate_and_capture(scraper, twofa_code=None):
 
                 # Look for "Remember this device" checkbox and check it
                 try:
-                    remember_checkbox = page.locator('input[type="checkbox"]').first
+                    # Strategy 1: Try to find by ID (most reliable)
+                    remember_checkbox = page.locator('#rememberBrowser')
                     if await remember_checkbox.count() > 0:
-                        await remember_checkbox.check()
-                        print("✅ Checked 'Remember this device'")
+                        # Try clicking the label first (common pattern when label overlays checkbox)
+                        try:
+                            label = page.locator('label[for="rememberBrowser"]')
+                            if await label.count() > 0:
+                                await label.click()
+                                print("✅ Checked 'Remember this device' via label")
+                            else:
+                                # Fallback: force click the checkbox
+                                await remember_checkbox.check(force=True)
+                                print("✅ Checked 'Remember this device' via force click")
+                        except Exception as label_error:
+                            print(f"⚠️ Label click failed, trying JavaScript: {label_error}")
+                            # Fallback: Use JavaScript to check the box
+                            await page.evaluate('document.getElementById("rememberBrowser").checked = true')
+                            print("✅ Checked 'Remember this device' via JavaScript")
+                    else:
+                        # Fallback to generic checkbox selector
+                        generic_checkbox = page.locator('input[type="checkbox"]').first
+                        if await generic_checkbox.count() > 0:
+                            await generic_checkbox.check(force=True)
+                            print("✅ Checked checkbox via generic selector")
                 except Exception as e:
-                    print(f"⚠️ Could not find remember checkbox: {e}")
+                    print(f"⚠️ Could not check remember device: {e}")
+                    # Continue anyway - checkbox might not be required
 
                 # Click verify/continue button
                 verify_button = page.locator('button[type="submit"], button:has-text("Verify"), button:has-text("Continue")').first
