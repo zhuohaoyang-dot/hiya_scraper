@@ -269,6 +269,17 @@
 
         console.log('Using backend URL:', BACKEND_URL);
 
+        // Check if user is authenticated
+        const userCookies = localStorage.getItem('hiya_cookies');
+        const authTime = localStorage.getItem('hiya_auth_time');
+
+        // Check if cookies are expired (30 days)
+        const THIRTY_DAYS = 30 * 24 * 60 * 60 * 1000;
+        if (!userCookies || !authTime || (Date.now() - parseInt(authTime)) > THIRTY_DAYS) {
+            // Redirect to login
+            window.location.href = 'login.html';
+        }
+
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
 
@@ -283,25 +294,26 @@
             progressBar.classList.add('show');
             progressFill.style.width = '10%';
 
-            showStatus('info', 'Starting Scraper', 'Using pre-authenticated cookies...');
+            showStatus('info', 'Starting Scraper', 'Using your authenticated session...');
             addLog('🚀 Initializing scraper...');
             addLog(`📊 Target: ${pages} pages`);
-            addLog('🍪 Using cookie-based authentication');
+            addLog('🍪 Using your authenticated cookies');
 
             // Start progress simulation
             startProgressSimulation(pages);
 
             try {
-                addLog('✓ Authentication loaded from server');
+                addLog('✓ Loading your authentication...');
 
-                // Call backend API (no credentials needed - uses server-side cookies)
-                const response = await fetch(`${BACKEND_URL}/scrape`, {
+                // Call backend API with user's cookies
+                const response = await fetch(`${BACKEND_URL}/scrape-with-cookies`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
-                        pages: pages
+                        pages: pages,
+                        cookies: userCookies
                     })
                 });
 

@@ -10,6 +10,7 @@ import os
 from datetime import datetime
 from playwright.async_api import async_playwright, TimeoutError as PlaywrightTimeout
 import json
+import time
 
 class HiyaScraper:
     def __init__(self, email=None, password=None, manual_login=False, cookies=None):
@@ -22,8 +23,136 @@ class HiyaScraper:
         self.phones_url = f"{self.base_url}/registration/cross-carrier-registration/phones"
         self.data = []
         self.total_pages = 20
+        self.context = None  # Store browser context for cookie updates
+        self.device_cookies = []  # Store device trust cookies separately
 
-    
+    def check_cookies_expired(self):
+        """Check if session cookies are expired or about to expire"""
+        if not self.cookies:
+            return True
+
+        current_time = time.time()
+        critical_cookies = ['auth0', 'auth0_compat', 'appSession.0', 'appSession.1']
+
+        for cookie in self.cookies:
+            if cookie.get('name') in critical_cookies:
+                expires = cookie.get('expires', -1)
+
+                # If expires is -1, it's a session cookie (expires when browser closes)
+                if expires == -1:
+                    continue
+
+                # Check if cookie expires within the next hour (3600 seconds)
+                if expires < current_time + 3600:
+                    print(f"⚠️  Cookie '{cookie.get('name')}' is expired or expiring soon")
+                    return True
+
+        return False
+
+    def separate_device_cookies(self):
+        """Separate device trust cookies from session cookies"""
+        if not self.cookies:
+            return
+
+        # Device trust cookies that should be preserved during re-authentication
+        device_cookie_names = ['did', 'did_compat', 'auth0-mf', 'auth0-mf_compat',
+                               '_cfuvid', 'hubspotutk', '__hstc', '_lfa']
+
+        self.device_cookies = [
+            cookie for cookie in self.cookies
+            if cookie.get('name') in device_cookie_names
+        ]
+
+        print(f"📌 Preserved {len(self.device_cookies)} device trust cookies")
+
+    async def refresh_session_cookies(self, page):
+        """Refresh session by re-authenticating with email/password (2FA skipped via device cookies)"""
+        print("\n" + "="*60)
+        print("🔄 SESSION REFRESH: Re-authenticating to get fresh cookies")
+        print("="*60)
+
+        if not self.email or not self.password:
+            raise Exception("Cannot refresh session: email/password not provided")
+
+        # Preserve device trust cookies
+        self.separate_device_cookies()
+
+        # Navigate to login page
+        print("📍 Navigating to login page...")
+        await page.goto(self.login_url, wait_until="domcontentloaded", timeout=60000)
+        await asyncio.sleep(2)
+
+        # Wait for login form
+        print("⏳ Waiting for login form...")
+        await page.wait_for_selector('input[type="email"], input[type="text"]', timeout=10000)
+
+        # Fill in credentials
+        print(f"🔑 Entering credentials for: {self.email}")
+        email_input = page.locator('input[type="email"], input[name="username"], input[name="email"]').first
+        await email_input.fill(self.email)
+
+        password_input = page.locator('input[type="password"], input[name="password"]').first
+        await password_input.fill(self.password)
+
+        # Click login button
+        print("👆 Clicking login button...")
+        login_button = page.locator('button[type="submit"], button:has-text("Log in"), button:has-text("Continue")').first
+        await login_button.click()
+
+        # Wait for navigation after login
+        print("⏳ Waiting for authentication...")
+        await asyncio.sleep(5)
+
+        # Check current URL
+        current_url = page.url
+        print(f"📍 Current URL: {current_url}")
+
+        # Check if we're asked for 2FA
+        if "mfa" in current_url.lower() or "verify" in current_url.lower():
+            print("⚠️  2FA verification page detected!")
+            print("💡 This should NOT happen if device cookies are valid")
+            print("🔧 Possible solutions:")
+            print("   1. Run capture_cookies.py again and check 'Remember this device'")
+            print("   2. Ensure auth0-mf cookie is included in HIYA_COOKIES")
+            raise Exception("2FA required but cannot be automated. Please refresh device cookies.")
+
+        # Wait for successful redirect to business portal
+        try:
+            await page.wait_for_url("**/business.hiya.com/**", timeout=15000)
+            print("✅ Login successful! Skipped 2FA via device trust cookies")
+        except PlaywrightTimeout:
+            await asyncio.sleep(3)
+            current_url = page.url
+            if "business.hiya.com" in current_url:
+                print("✅ Login successful!")
+            else:
+                raise Exception(f"Login failed - unexpected URL: {current_url}")
+
+        # Capture fresh cookies
+        print("🍪 Capturing fresh session cookies...")
+        fresh_cookies = await self.context.cookies()
+
+        # Merge device cookies with fresh session cookies
+        # Remove duplicates, preferring device cookies for device-related ones
+        device_cookie_names = [c['name'] for c in self.device_cookies]
+        merged_cookies = self.device_cookies.copy()
+
+        for cookie in fresh_cookies:
+            if cookie['name'] not in device_cookie_names:
+                merged_cookies.append(cookie)
+
+        self.cookies = merged_cookies
+        print(f"✅ Updated cookie store with {len(self.cookies)} total cookies")
+
+        # Navigate to phones page
+        print("📍 Navigating to phones page...")
+        await page.goto(self.phones_url, wait_until="domcontentloaded", timeout=60000)
+        await asyncio.sleep(2)
+
+        print("="*60)
+        print("✅ SESSION REFRESH COMPLETE")
+        print("="*60 + "\n")
+
     async def wait_for_manual_login(self, page):
         """Wait for user to manually complete login and reach the phones page"""
         print("\n" + "="*60)
@@ -349,7 +478,7 @@ class HiyaScraper:
                 ] if is_production else []
             )
 
-            context = await browser.new_context(
+            self.context = await browser.new_context(
                 viewport={'width': 1920, 'height': 1080},
                 user_agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'
             )
@@ -357,13 +486,32 @@ class HiyaScraper:
             # Load cookies if provided
             if self.cookies:
                 print(f"Loading {len(self.cookies)} cookies into browser context...")
-                await context.add_cookies(self.cookies)
+                await self.context.add_cookies(self.cookies)
 
-            page = await context.new_page()
+            page = await self.context.new_page()
 
             try:
-                # Login (or skip if using cookies)
+                # Check if cookies need refreshing
+                needs_refresh = False
                 if self.cookies:
+                    print("\n🔍 Checking cookie expiration status...")
+                    needs_refresh = self.check_cookies_expired()
+
+                    if needs_refresh:
+                        print("⚠️  Session cookies are expired or expiring soon")
+
+                        # Check if we have credentials for auto-refresh
+                        if self.email and self.password:
+                            print("✅ Credentials available - will attempt automatic session refresh")
+                            await self.refresh_session_cookies(page)
+                        else:
+                            print("❌ No credentials provided for automatic refresh")
+                            raise Exception("Cookies expired and no credentials available for auto-refresh. Please run capture_cookies.py or provide HIYA_EMAIL and HIYA_PASSWORD")
+                    else:
+                        print("✅ Session cookies are still valid")
+
+                # Login (or skip if using cookies)
+                if self.cookies and not needs_refresh:
                     # Skip login, go directly to phones page
                     print("Navigating directly to phones page with cookies...")
                     await page.goto(self.phones_url, wait_until="domcontentloaded", timeout=60000)
@@ -373,14 +521,21 @@ class HiyaScraper:
                     current_url = page.url
 
                     if "login" in current_url or "auth" in current_url:
-                        raise Exception("Cookies expired or invalid - please capture new cookies")
+                        print("⚠️  Redirected to login page - cookies may be invalid")
+
+                        # Try automatic refresh if credentials available
+                        if self.email and self.password:
+                            print("🔄 Attempting automatic session refresh...")
+                            await self.refresh_session_cookies(page)
+                        else:
+                            raise Exception("Cookies expired or invalid - please capture new cookies")
 
                     if "business.hiya.com" not in current_url:
                         raise Exception("Failed to access Hiya business portal - cookies may be expired")
 
                     print("✓ Successfully authenticated with cookies!")
-                else:
-                    # Traditional login flow
+                elif not needs_refresh:
+                    # Traditional login flow (no cookies provided)
                     await self.login(page)
 
                     # Navigate to phones page (only if not using cookies)
