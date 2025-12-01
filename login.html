@@ -182,15 +182,8 @@
 </head>
 <body>
     <div class="container">
-        <h1>🔐 Hiya Scraper Login</h1>
+        <h1>Hiya Scraper Login</h1>
         <p class="subtitle">Authenticate with your Hiya account</p>
-
-        <div class="info-box">
-            <p><strong>ℹ️ How it works:</strong></p>
-            <p>1. Enter your Hiya email and password</p>
-            <p>2. You'll receive a link to complete 2FA authentication</p>
-            <p>3. After authentication, you can scrape for 30 days without re-login!</p>
-        </div>
 
         <form id="loginForm">
             <div class="input-group">
@@ -219,7 +212,7 @@
         <div class="status-box" id="statusBox"></div>
 
         <div class="link-box">
-            Already authenticated? <a href="index.html">Go to Scraper →</a>
+            Already authenticated? <a href="index.html">Scraper Now→</a>
         </div>
     </div>
 
@@ -288,7 +281,7 @@
                 console.error('Authentication error:', error);
                 showStatus('error', `❌ Error: ${error.message}<br><br>Please check your credentials and try again.`);
                 loginBtn.disabled = false;
-                loginBtn.innerHTML = '🔐 Login & Remember This Device (30 days)';
+                loginBtn.innerHTML = 'Login & Remember This Device (30 days)';
             }
         });
 
