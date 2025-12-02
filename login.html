@@ -204,6 +204,13 @@
                 </small>
             </div>
 
+            <div class="input-group" style="display: flex; align-items: center; margin-top: 10px;">
+                <input type="checkbox" id="rememberMe" style="width: auto; margin-right: 8px;">
+                <label for="rememberMe" style="margin-bottom: 0; cursor: pointer; font-weight: normal;">
+                    Remember my email and password (not 2FA code)
+                </label>
+            </div>
+
             <button type="submit" class="login-button" id="loginBtn">
                 🔐 Login & Remember This Device (30 days)
             </button>
@@ -220,11 +227,26 @@
         const form = document.getElementById('loginForm');
         const loginBtn = document.getElementById('loginBtn');
         const statusBox = document.getElementById('statusBox');
+        const emailInput = document.getElementById('email');
+        const passwordInput = document.getElementById('password');
+        const rememberMeCheckbox = document.getElementById('rememberMe');
 
         // Use correct backend URL
         const BACKEND_URL = window.location.hostname.includes('github.io') || window.location.hostname.includes('github')
             ? 'https://hiyascraper-production.up.railway.app'
             : 'http://localhost:8000';
+
+        // Load saved credentials on page load
+        window.addEventListener('DOMContentLoaded', () => {
+            const savedEmail = localStorage.getItem('hiya_saved_email');
+            const savedPassword = localStorage.getItem('hiya_saved_password');
+
+            if (savedEmail && savedPassword) {
+                emailInput.value = savedEmail;
+                passwordInput.value = savedPassword;
+                rememberMeCheckbox.checked = true;
+            }
+        });
 
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -263,6 +285,17 @@
                 localStorage.setItem('hiya_cookies', data.cookies);
                 localStorage.setItem('hiya_email', email);
                 localStorage.setItem('hiya_auth_time', Date.now());
+
+                // Handle "Remember Me" functionality
+                if (rememberMeCheckbox.checked) {
+                    // Save email and password for future logins (NOT 2FA)
+                    localStorage.setItem('hiya_saved_email', email);
+                    localStorage.setItem('hiya_saved_password', password);
+                } else {
+                    // Clear saved credentials if unchecked
+                    localStorage.removeItem('hiya_saved_email');
+                    localStorage.removeItem('hiya_saved_password');
+                }
 
                 showStatus('success', `
                     <strong>✅ Authentication Successful!</strong><br><br>

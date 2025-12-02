@@ -217,6 +217,50 @@
             font-size: 13px;
             line-height: 1.5;
         }
+
+        .user-info {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 1px solid #e0e0e0;
+        }
+
+        .user-email {
+            color: #333;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .logout-button {
+            padding: 8px 16px;
+            background: #fff;
+            color: #667eea;
+            border: 2px solid #667eea;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .logout-button:hover {
+            background: #667eea;
+            color: white;
+        }
+
+        .dashboard-link {
+            color: #2196f3;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .dashboard-link:hover {
+            text-decoration: underline;
+        }
     </style>
 </head>
 <body>
@@ -224,10 +268,20 @@
         <h1>📱 Hiya Phone Scraper</h1>
         <p class="subtitle">Extract phone registration data from Hiya Business Portal</p>
 
+        <div class="user-info">
+            <div>
+                <span style="color: #666; font-size: 13px;">Logged in as: </span>
+                <span class="user-email" id="userEmail"></span>
+            </div>
+            <button class="logout-button" id="logoutBtn">🚪 Logout</button>
+        </div>
+
         <div class="info-box">
             <p><strong>✅ Cookie-Based Authentication Enabled</strong></p>
-            <p>This scraper uses pre-authenticated session cookies managed by your administrator. Simply enter the number of pages to scrape and click start!</p>
-            <p style="margin-top: 10px; font-size: 12px; color: #666;">Note: If you see an error about expired cookies, contact your administrator to refresh them (typically needed once per month).</p>
+            <p>This scraper uses your authenticated session cookies. Simply enter the number of pages to scrape and click start!</p>
+            <p style="margin-top: 10px; font-size: 12px; color: #666;">
+                Note: Access your <a href="https://business.hiya.com/dashboard" target="_blank" class="dashboard-link">Hiya Business Dashboard →</a> to view your data online.
+            </p>
         </div>
 
         <form id="scraperForm">
@@ -272,6 +326,7 @@
         // Check if user is authenticated
         const userCookies = localStorage.getItem('hiya_cookies');
         const authTime = localStorage.getItem('hiya_auth_time');
+        const userEmail = localStorage.getItem('hiya_email');
 
         // Check if cookies are expired (30 days)
         const THIRTY_DAYS = 30 * 24 * 60 * 60 * 1000;
@@ -279,6 +334,22 @@
             // Redirect to login
             window.location.href = 'login.html';
         }
+
+        // Display user email
+        document.getElementById('userEmail').textContent = userEmail || 'Unknown';
+
+        // Logout button handler
+        document.getElementById('logoutBtn').addEventListener('click', () => {
+            if (confirm('Are you sure you want to logout? You will need to re-authenticate.')) {
+                // Clear all authentication data (but keep saved credentials if "Remember Me" was checked)
+                localStorage.removeItem('hiya_cookies');
+                localStorage.removeItem('hiya_email');
+                localStorage.removeItem('hiya_auth_time');
+
+                // Redirect to login
+                window.location.href = 'login.html';
+            }
+        });
 
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
